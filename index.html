@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>七夕快乐</title>
+  <style>
+    :root { --text: #fff7f1; --soft: #e4cbd1; --pink: #ff91ad; --gold: #ffd38c; }
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+    body { background: #081020; color: var(--text); font-family: "Microsoft YaHei", "PingFang SC", sans-serif; }
+    #sky { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+    .veil { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(circle at 50% 50%, transparent 0 27%, rgba(3, 7, 18, .24) 75%, rgba(2, 5, 14, .6) 100%); }
+    .content { position: relative; z-index: 2; min-height: 100%; display: grid; place-items: center; padding: 30px 18px; text-align: center; }
+    .message { max-width: 650px; transform: translateY(-3vh); }
+    .date { display: inline-block; margin-bottom: 22px; padding: 7px 13px; border: 1px solid rgba(255, 211, 140, .45); color: var(--gold); font: 700 11px/1 ui-monospace, Consolas, monospace; letter-spacing: .16em; }
+    h1 { margin: 0; color: var(--text); font-size: clamp(58px, 14vw, 132px); line-height: .95; letter-spacing: .06em; text-shadow: 0 0 28px rgba(255, 145, 173, .42), 0 8px 30px rgba(0, 0, 0, .3); }
+    .line { width: 64px; height: 1px; margin: 25px auto 20px; background: var(--pink); box-shadow: 0 0 14px var(--pink); }
+    .subtitle { margin: 0 auto; color: var(--soft); font-size: clamp(14px, 2vw, 18px); line-height: 2; letter-spacing: .08em; }
+    .subtitle em { color: var(--gold); font-style: normal; }
+    .action { margin-top: 30px; padding: 12px 23px; border: 1px solid rgba(255, 145, 173, .65); background: rgba(20, 20, 42, .42); color: var(--text); font: 700 13px/1 "Microsoft YaHei", sans-serif; cursor: pointer; transition: background .2s, border-color .2s, transform .2s; }
+    .action:hover { background: rgba(255, 145, 173, .2); border-color: var(--pink); transform: translateY(-2px); }
+    .corner { position: fixed; z-index: 3; color: rgba(255, 247, 241, .55); font-size: 11px; letter-spacing: .12em; }
+    .corner.top { top: 22px; left: 24px; }
+    .corner.bottom { right: 24px; bottom: 22px; text-align: right; }
+    @media (max-width: 600px) { .message { transform: translateY(-5vh); } .date { margin-bottom: 17px; } .line { margin: 20px auto 15px; } .subtitle { letter-spacing: .03em; } .corner { font-size: 9px; } }
+  </style>
+</head>
+<body>
+  <canvas id="sky" aria-hidden="true"></canvas>
+  <div class="veil"></div>
+  <div class="corner top">QIXI / 2026</div>
+  <div class="corner bottom">愿每一次相逢<br>都值得被星光记住</div>
+  <main class="content">
+    <section class="message">
+      <div class="date">农历七月初七 · 七夕</div>
+      <h1>七夕快乐</h1>
+      <div class="line"></div>
+      <p class="subtitle">愿你眼里有星河，心中有<em>欢喜</em>，<br>也愿喜欢的人，恰好也喜欢你。</p>
+      <button class="action" id="wish" type="button">点亮鹊桥</button>
+    </section>
+  </main>
+  <script>
+    (() => {
+      const canvas = document.getElementById('sky');
+      const ctx = canvas.getContext('2d');
+      const wish = document.getElementById('wish');
+      let width = 0, height = 0, dpr = 1, stars = [], dust = [], sparks = [], bridge = 0, last = 0;
+      const mouse = { x: 0, y: 0, active: false };
+      function resize() {
+        width = window.innerWidth; height = window.innerHeight; dpr = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = Math.round(width * dpr); canvas.height = Math.round(height * dpr); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        stars = Array.from({ length: Math.max(90, Math.floor(width * height / 6800)) }, () => ({ x: Math.random() * width, y: Math.random() * height, r: Math.random() * 1.35 + .25, a: Math.random() * .7 + .15, p: Math.random() * 6.28, s: Math.random() * .8 + .2 }));
+        dust = Array.from({ length: 80 }, () => ({ x: Math.random() * width, y: height * (.2 + Math.random() * .66), a: Math.random() * .16, r: Math.random() * 1.8 + .4 }));
+      }
+      function burst(x, y, color) { for (let i = 0; i < 36; i++) { const a = Math.random() * Math.PI * 2, speed = 55 + Math.random() * 145; sparks.push({ x, y, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, life: 1, color }); } }
+      function draw(now) {
+        const dt = Math.min(.04, (now - last) / 1000 || 0); last = now;
+        ctx.fillStyle = '#081020'; ctx.fillRect(0, 0, width, height);
+        const haze = ctx.createRadialGradient(width * .5, height * .42, 0, width * .5, height * .42, Math.max(width, height) * .72); haze.addColorStop(0, 'rgba(75, 47, 88, .34)'); haze.addColorStop(.54, 'rgba(21, 28, 62, .13)'); haze.addColorStop(1, 'rgba(5, 11, 27, 0)'); ctx.fillStyle = haze; ctx.fillRect(0, 0, width, height);
+        for (const s of stars) { const alpha = s.a + Math.sin(now * .001 * s.s + s.p) * .18; ctx.globalAlpha = Math.max(.05, alpha); ctx.fillStyle = s.r > 1.15 ? '#fff0c5' : '#d5e5ff'; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill(); }
+        ctx.globalAlpha = 1;
+        const river = ctx.createLinearGradient(0, 0, width, 0); river.addColorStop(0, 'rgba(105, 145, 229, 0)'); river.addColorStop(.22, 'rgba(128, 151, 229, .16)'); river.addColorStop(.5, 'rgba(232, 191, 236, .33)'); river.addColorStop(.78, 'rgba(128, 151, 229, .16)'); river.addColorStop(1, 'rgba(105, 145, 229, 0)'); ctx.fillStyle = river; ctx.save(); ctx.translate(width * .5, height * .38); ctx.rotate(-.16); ctx.fillRect(-width * .8, -height * .035, width * 1.6, height * .07); ctx.restore();
+        for (const d of dust) { ctx.globalAlpha = d.a; ctx.fillStyle = '#eec5df'; ctx.beginPath(); ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2); ctx.fill(); } ctx.globalAlpha = 1;
+        const bridgeY = height * .72; if (bridge > 0) { ctx.globalAlpha = bridge; ctx.strokeStyle = '#ffd38c'; ctx.shadowBlur = 18; ctx.shadowColor = '#ffb26f'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(width * .12, bridgeY + 15); ctx.quadraticCurveTo(width * .5, bridgeY - 70, width * .88, bridgeY + 15); ctx.stroke(); ctx.shadowBlur = 0; for (let i = 0; i < 18; i++) { const x = width * .14 + i * width * .72 / 17; const y = bridgeY + 13 - Math.sin((i / 17) * Math.PI) * 67; ctx.fillStyle = '#fff0c5'; ctx.fillRect(x - 2, y - 2, 4, 4); } ctx.globalAlpha = 1; bridge = Math.max(0, bridge - dt * .03); }
+        for (const p of sparks) { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= .985; p.vy = p.vy * .985 + 22 * dt; p.life -= dt * 1.25; ctx.globalAlpha = Math.max(0, p.life); ctx.fillStyle = p.color; ctx.fillRect(p.x, p.y, 2, 2); } sparks = sparks.filter(p => p.life > 0); ctx.globalAlpha = 1;
+        requestAnimationFrame(draw);
+      }
+      function light(x, y) { bridge = 1; burst(x, y, Math.random() > .5 ? '#ff91ad' : '#ffd38c'); }
+      wish.addEventListener('click', () => { light(width * (.35 + Math.random() * .3), height * (.29 + Math.random() * .2)); wish.textContent = '愿望已点亮'; setTimeout(() => wish.textContent = '再点一次许愿', 1800); });
+      window.addEventListener('pointermove', e => { mouse.x = e.clientX; mouse.y = e.clientY; mouse.active = true; });
+      window.addEventListener('pointerdown', e => { if (e.target === canvas) light(e.clientX, e.clientY); });
+      resize(); requestAnimationFrame(draw); window.addEventListener('resize', resize);
+    })();
+  </script>
+</body>
+</html>
